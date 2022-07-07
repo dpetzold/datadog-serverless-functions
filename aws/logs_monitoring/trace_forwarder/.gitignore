@@ -1,5 +1,0 @@
-bin
-.layers
-*.pyc
-!scripts
-vendor
