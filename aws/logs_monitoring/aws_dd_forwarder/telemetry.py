@@ -3,7 +3,7 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2021 Datadog, Inc.
 
-from settings import DD_FORWARDER_VERSION
+from .settings import DD_FORWARDER_VERSION
 
 DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX = "aws.dd_forwarder"
 DD_FORWARDER_TELEMETRY_TAGS = []

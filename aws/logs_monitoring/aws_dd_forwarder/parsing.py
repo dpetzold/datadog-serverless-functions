@@ -42,18 +42,11 @@ from .settings import (
 logger = logging.getLogger()
 
 if DD_MULTILINE_LOG_REGEX_PATTERN:
-    try:
-        multiline_regex = re.compile(
-            "[\n\r\f]+(?={})".format(DD_MULTILINE_LOG_REGEX_PATTERN)
-        )
-    except Exception:
-        raise Exception(
-            "could not compile multiline regex with pattern: {}".format(
-                DD_MULTILINE_LOG_REGEX_PATTERN
-            )
-        )
+    multiline_regex = re.compile(
+        r"[\n\r\f]+(?={})".format(DD_MULTILINE_LOG_REGEX_PATTERN)
+    )
     multiline_regex_start_pattern = re.compile(
-        "^{}".format(DD_MULTILINE_LOG_REGEX_PATTERN)
+        r"^{}".format(DD_MULTILINE_LOG_REGEX_PATTERN)
     )
 
 rds_regex = re.compile(r"/aws/rds/(instance|cluster)/(?P<host>[^/]+)/(?P<name>[^/]+)")
@@ -143,7 +136,7 @@ def parse_event_type(event):
 
     elif "detail" in event:
         return "events"
-    raise Exception("Event type not supported (see #Event supported section)")
+    raise ValueError("Event type not supported (see #Event supported section)")
 
 
 # Handle S3 events
