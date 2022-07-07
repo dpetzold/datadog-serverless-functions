@@ -25,91 +25,91 @@ def get_env_var(envvar, default, boolean=False):
     return value
 
 
-## @param DD_API_KEY - String - conditional - default: none
-## The Datadog API key associated with your Datadog Account
-## It can be found here:
-##
-##   * Datadog US Site: https://app.datadoghq.com/organization-settings/api-keys
-##   * Datadog EU Site: https://app.datadoghq.eu/account/settings#api
-##
-## Must be set if one of the following is not set: DD_API_KEY_SECRET_ARN, DD_API_KEY_SSM_NAME, DD_KMS_API_KEY
+# @param DD_API_KEY - String - conditional - default: none
+# The Datadog API key associated with your Datadog Account
+# It can be found here:
+#
+#   * Datadog US Site: https://app.datadoghq.com/organization-settings/api-keys
+#   * Datadog EU Site: https://app.datadoghq.eu/account/settings#api
+#
+# Must be set if one of the following is not set: DD_API_KEY_SECRET_ARN, DD_API_KEY_SSM_NAME, DD_KMS_API_KEY
 #
 DD_API_KEY = "<YOUR_DATADOG_API_KEY>"
 
-## @param DD_API_KEY_SECRET_ARN - String - optional - default: none
-## ARN of Datadog API key stored in AWS Secrets Manager
-##
-## Supercedes: DD_API_KEY_SSM_NAME, DD_KMS_API_KEY, DD_API_KEY
+# @param DD_API_KEY_SECRET_ARN - String - optional - default: none
+# ARN of Datadog API key stored in AWS Secrets Manager
+#
+# Supercedes: DD_API_KEY_SSM_NAME, DD_KMS_API_KEY, DD_API_KEY
 
-## @param DD_API_KEY_SSM_NAME - String - optional - default: none
-## Name of parameter containing Datadog API key in AWS SSM Parameter Store
-##
-## Supercedes: DD_KMS_API_KEY, DD_API_KEY
+# @param DD_API_KEY_SSM_NAME - String - optional - default: none
+# Name of parameter containing Datadog API key in AWS SSM Parameter Store
+#
+# Supercedes: DD_KMS_API_KEY, DD_API_KEY
 
-## @param DD_KMS_API_KEY - String - optional - default: none
-## AWS KMS encrypted Datadog API key
-##
-## Supercedes: DD_API_KEY
+# @param DD_KMS_API_KEY - String - optional - default: none
+# AWS KMS encrypted Datadog API key
+#
+# Supercedes: DD_API_KEY
 
-## @param DD_FORWARD_LOG - boolean - optional - default: true
-## Set this variable to `False` to disable log forwarding.
-## E.g., when you only want to forward metrics and traces from logs.
+# @param DD_FORWARD_LOG - boolean - optional - default: true
+# Set this variable to `False` to disable log forwarding.
+# E.g., when you only want to forward metrics and traces from logs.
 #
 DD_FORWARD_LOG = get_env_var("DD_FORWARD_LOG", "true", boolean=True)
 
-## @param DD_USE_TCP - boolean - optional -default: false
-## Change this value to `true` to send your logs and metrics using the TCP network client
-## By default, it uses the HTTP client.
+# @param DD_USE_TCP - boolean - optional -default: false
+# Change this value to `true` to send your logs and metrics using the TCP network client
+# By default, it uses the HTTP client.
 #
 DD_USE_TCP = get_env_var("DD_USE_TCP", "false", boolean=True)
 
-## @param DD_USE_COMPRESSION - boolean - optional -default: true
-## Only valid when sending logs over HTTP
-## Change this value to `false` to send your logs without any compression applied
-## By default, compression is enabled.
+# @param DD_USE_COMPRESSION - boolean - optional -default: true
+# Only valid when sending logs over HTTP
+# Change this value to `false` to send your logs without any compression applied
+# By default, compression is enabled.
 #
 DD_USE_COMPRESSION = get_env_var("DD_USE_COMPRESSION", "true", boolean=True)
 
-## @param DD_USE_COMPRESSION - integer - optional -default: 6
-## Change this value to set the compression level.
-## Values range from 0 (no compression) to 9 (best compression).
-## By default, compression is set to level 6.
+# @param DD_USE_COMPRESSION - integer - optional -default: 6
+# Change this value to set the compression level.
+# Values range from 0 (no compression) to 9 (best compression).
+# By default, compression is set to level 6.
 #
 DD_COMPRESSION_LEVEL = int(os.getenv("DD_COMPRESSION_LEVEL", 6))
 
-## @param DD_USE_SSL - boolean - optional -default: false
-## Change this value to `true` to disable SSL
-## Useful when you are forwarding your logs to a proxy.
+# @param DD_USE_SSL - boolean - optional -default: false
+# Change this value to `true` to disable SSL
+# Useful when you are forwarding your logs to a proxy.
 #
 DD_NO_SSL = get_env_var("DD_NO_SSL", "false", boolean=True)
 
-## @param DD_SKIP_SSL_VALIDATION - boolean - optional -default: false
-## Disable SSL certificate validation when forwarding logs via HTTP.
+# @param DD_SKIP_SSL_VALIDATION - boolean - optional -default: false
+# Disable SSL certificate validation when forwarding logs via HTTP.
 #
 DD_SKIP_SSL_VALIDATION = get_env_var("DD_SKIP_SSL_VALIDATION", "false", boolean=True)
 
-## @param DD_SITE - String - optional -default: datadoghq.com
-## Define the Datadog Site to send your logs and metrics to.
-## Set it to `datadoghq.eu` to send your logs and metrics to Datadog EU site.
+# @param DD_SITE - String - optional -default: datadoghq.com
+# Define the Datadog Site to send your logs and metrics to.
+# Set it to `datadoghq.eu` to send your logs and metrics to Datadog EU site.
 #
 DD_SITE = get_env_var("DD_SITE", default="datadoghq.com")
 
-## @param DD_TAGS - list of comma separated strings - optional -default: none
-## Pass custom tags as environment variable or through this variable.
-## Ensure your tags are a comma separated list of strings with no trailing comma in the envvar!
+# @param DD_TAGS - list of comma separated strings - optional -default: none
+# Pass custom tags as environment variable or through this variable.
+# Ensure your tags are a comma separated list of strings with no trailing comma in the envvar!
 #
 DD_TAGS = get_env_var("DD_TAGS", "")
 
-## @param DD_MAX_WORKERS - Max number of workers sending logs concurrently
+# @param DD_MAX_WORKERS - Max number of workers sending logs concurrently
 DD_MAX_WORKERS = int(os.getenv("DD_MAX_WORKERS", 20))
 
-## @param DD_API_URL - Url to use for  validating the the api key.
+# @param DD_API_URL - Url to use for  validating the the api key.
 DD_API_URL = get_env_var(
     "DD_API_URL",
     default="{}://api.{}".format("http" if DD_NO_SSL else "https", DD_SITE),
 )
 
-## @param DD_TRACE_INTAKE_URL
+# @param DD_TRACE_INTAKE_URL
 DD_TRACE_INTAKE_URL = get_env_var(
     "DD_TRACE_INTAKE_URL",
     default="{}://trace.agent.{}".format("http" if DD_NO_SSL else "https", DD_SITE),
@@ -117,7 +117,7 @@ DD_TRACE_INTAKE_URL = get_env_var(
 
 # The TCP transport has been deprecated, migrate to the HTTP intake.
 if DD_USE_TCP:
-    DD_URL = get_env_var("DD_URL", default="lambda-intake.logs." + DD_SITE)
+    DD_URL = get_env_var("DD_URL", default=f"lambda-intake.logs.{DD_SITE}")
     try:
         if "DD_SITE" in os.environ and DD_SITE == "datadoghq.eu":
             DD_PORT = int(get_env_var("DD_PORT", default="443"))
@@ -126,10 +126,10 @@ if DD_USE_TCP:
     except Exception:
         DD_PORT = 10516
 else:
-    DD_URL = get_env_var("DD_URL", default="http-intake.logs." + DD_SITE)
+    DD_URL = get_env_var("DD_URL", default=f"http-intake.logs.{DD_SITE}")
     DD_PORT = int(get_env_var("DD_PORT", default="443"))
 
-## @param DD_USE_VPC
+# @param DD_USE_VPC
 DD_USE_VPC = get_env_var("DD_USE_VPC", "false", boolean=True)
 
 # DEPRECATED. No longer need to use special endpoints, as you can now expose
@@ -164,11 +164,11 @@ class ScrubbingRuleConfig(object):
 # Option to redact all pattern that looks like an ip address / email address / custom pattern
 SCRUBBING_RULE_CONFIGS = [
     ScrubbingRuleConfig(
-        "REDACT_IP", "\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", "xxx.xxx.xxx.xxx"
+        "REDACT_IP", r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", "xxx.xxx.xxx.xxx"
     ),
     ScrubbingRuleConfig(
         "REDACT_EMAIL",
-        "[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
+        r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+",
         "xxxxx@xxxxx.com",
     ),
     ScrubbingRuleConfig(
@@ -228,7 +228,9 @@ DD_HOST = "host"
 DD_FORWARDER_VERSION = "3.51.0"
 
 # Additional target lambda invoked async with event data
-DD_ADDITIONAL_TARGET_LAMBDAS = get_env_var("DD_ADDITIONAL_TARGET_LAMBDAS", default=None)
+DD_ADDITIONAL_TARGET_LAMBDAS = str(
+    get_env_var("DD_ADDITIONAL_TARGET_LAMBDAS", default=None)
+)
 
 DD_S3_BUCKET_NAME = get_env_var("DD_S3_BUCKET_NAME", default=None)
 # These default cache names remain unchanged so we can get existing cache data for these
