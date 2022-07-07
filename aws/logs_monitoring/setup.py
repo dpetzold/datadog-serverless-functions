@@ -28,7 +28,7 @@ setup(
     extras_require={
         "dev": [
             "nose2==0.9.1",
-            "flake8==3.7.9",
+            "flake8==4.0.1",
         ]
     },
 )

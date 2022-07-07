@@ -3,7 +3,6 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2021 Datadog, Inc.
 
-from settings import DD_FORWARDER_VERSION
 import gzip
 import json
 import os
@@ -17,23 +16,24 @@ import time
 from requests_futures.sessions import FuturesSession
 
 from datadog_lambda.metric import lambda_stats
-from telemetry import (
+from .telemetry import (
     DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
     get_forwarder_telemetry_tags,
 )
-from settings import (
+from .settings import (
     DD_API_KEY,
-    DD_USE_TCP,
-    DD_USE_COMPRESSION,
     DD_COMPRESSION_LEVEL,
+    DD_FORWARDER_VERSION,
+    DD_MAX_WORKERS,
     DD_NO_SSL,
+    DD_PORT,
     DD_SKIP_SSL_VALIDATION,
     DD_URL,
-    DD_PORT,
-    SCRUBBING_RULE_CONFIGS,
-    INCLUDE_AT_MATCH,
+    DD_USE_COMPRESSION,
+    DD_USE_TCP,
     EXCLUDE_AT_MATCH,
-    DD_MAX_WORKERS,
+    INCLUDE_AT_MATCH,
+    SCRUBBING_RULE_CONFIGS,
 )
 
 logger = logging.getLogger()
@@ -49,14 +49,16 @@ class ScrubbingException(Exception):
 
 def forward_logs(logs):
     """Forward logs to Datadog"""
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Forwarding {len(logs)} logs")
+    logger.debug(f"Forwarding {len(logs)} logs")
+
     logs_to_forward = filter_logs(
         list(map(json.dumps, logs)),
         include_pattern=INCLUDE_AT_MATCH,
         exclude_pattern=EXCLUDE_AT_MATCH,
     )
+
     scrubber = DatadogScrubber(SCRUBBING_RULE_CONFIGS)
+
     if DD_USE_TCP:
         batcher = DatadogBatcher(256 * 1000, 256 * 1000, 1)
         cli = DatadogTCPClient(DD_URL, DD_PORT, DD_NO_SSL, DD_API_KEY, scrubber)
@@ -68,36 +70,25 @@ def forward_logs(logs):
 
     with DatadogClient(cli) as client:
         for batch in batcher.batch(logs_to_forward):
-            try:
-                client.send(batch)
-            except Exception:
-                logger.exception(f"Exception while forwarding log batch {batch}")
-            else:
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Forwarded log batch: {json.dumps(batch)}")
+            client.send(batch)
+            logger.debug(f"Forwarded log batch: {json.dumps(batch)}")
 
     lambda_stats.distribution(
-        "{}.logs_forwarded".format(DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX),
+        f"{DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX}.logs_forwarded",
         len(logs_to_forward),
         tags=get_forwarder_telemetry_tags(),
     )
 
 
 def compileRegex(rule, pattern):
-    if pattern is not None:
-        if pattern == "":
-            # If pattern is an empty string, raise exception
-            raise Exception(
-                "No pattern provided:\nAdd pattern or remove {} environment variable".format(
-                    rule
-                )
-            )
-        try:
-            return re.compile(pattern)
-        except Exception:
-            raise Exception(
-                "could not compile {} regex with pattern: {}".format(rule, pattern)
-            )
+    if pattern == "":
+        # If pattern is an empty string, raise exception
+        raise ValueError(
+            f"No pattern provided:\nAdd pattern or remove {rule} "
+            "environment variable"
+        )
+
+    return re.compile(pattern)
 
 
 def filter_logs(logs, include_pattern=None, exclude_pattern=None):
@@ -174,7 +165,7 @@ def compress_logs(batch, level):
     return gzip.compress(bytes(batch, "utf-8"), compression_level)
 
 
-class DatadogScrubber(object):
+class DatadogScrubber:
     def __init__(self, configs):
         rules = []
         for config in configs:
@@ -188,20 +179,17 @@ class DatadogScrubber(object):
 
     def scrub(self, payload):
         for rule in self._rules:
-            try:
-                payload = rule.regex.sub(rule.placeholder, payload)
-            except Exception:
-                raise ScrubbingException()
+            payload = rule.regex.sub(rule.placeholder, payload)
         return payload
 
 
-class ScrubbingRule(object):
+class ScrubbingRule:
     def __init__(self, regex, placeholder):
         self.regex = regex
         self.placeholder = placeholder
 
 
-class DatadogBatcher(object):
+class DatadogBatcher:
     def __init__(self, max_item_size_bytes, max_batch_size_bytes, max_items_count):
         self._max_item_size_bytes = max_item_size_bytes
         self._max_batch_size_bytes = max_batch_size_bytes
@@ -253,11 +241,11 @@ class DatadogTCPClient(object):
         self._api_key = api_key
         self._scrubber = scrubber
         self._sock = None
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                f"Initialized tcp client for logs intake: "
-                f"<host: {host}, port: {port}, no_ssl: {no_ssl}>"
-            )
+
+        logger.debug(
+            f"Initialized tcp client for logs intake: "
+            f"<host: {host}, port: {port}, no_ssl: {no_ssl}>"
+        )
 
     def _connect(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -279,11 +267,10 @@ class DatadogTCPClient(object):
     def send(self, logs):
         try:
             frame = self._scrubber.scrub(
-                "".join(["{} {}\n".format(self._api_key, log) for log in logs])
+                "".join([f"{self._api_key} {log}\n" for log in logs])
             )
-            self._sock.sendall(frame.encode("UTF-8"))
-        except ScrubbingException:
-            raise Exception("could not scrub the payload")
+            if self._sock:
+                self._sock.sendall(frame.encode("UTF-8"))
         except Exception:
             # most likely a network error, reset the connection
             self._reset()
@@ -293,20 +280,19 @@ class DatadogTCPClient(object):
         self._connect()
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):
+    def __exit__(self, *_):
         self._close()
 
 
-class DatadogHTTPClient(object):
+class DatadogHTTPClient:
     """
     Client that sends a batch of logs over HTTP.
     """
 
     _POST = "POST"
+    _HEADERS = {"Content-type": "application/json"}
     if DD_USE_COMPRESSION:
-        _HEADERS = {"Content-type": "application/json", "Content-Encoding": "gzip"}
-    else:
-        _HEADERS = {"Content-type": "application/json"}
+        _HEADERS.update({"Content-Encoding": "gzip"})
 
     _HEADERS["DD-EVP-ORIGIN"] = "aws_forwarder"
     _HEADERS["DD-EVP-ORIGIN-VERSION"] = DD_FORWARDER_VERSION
@@ -316,18 +302,17 @@ class DatadogHTTPClient(object):
     ):
         self._HEADERS.update({"DD-API-KEY": api_key})
         protocol = "http" if no_ssl else "https"
-        self._url = "{}://{}:{}/api/v2/logs".format(protocol, host, port)
+        self._url = f"{protocol}://{host}:{port}/api/v2/logs"
         self._scrubber = scrubber
         self._timeout = timeout
         self._session = None
         self._ssl_validation = not skip_ssl_validation
         self._futures = []
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                f"Initialized http client for logs intake: "
-                f"<host: {host}, port: {port}, url: {self._url}, no_ssl: {no_ssl}, "
-                f"skip_ssl_validation: {skip_ssl_validation}, timeout: {timeout}>"
-            )
+        logger.debug(
+            f"Initialized http client for logs intake: "
+            f"<host: {host}, port: {port}, url: {self._url}, no_ssl: {no_ssl}, "
+            f"skip_ssl_validation: {skip_ssl_validation}, timeout: {timeout}>"
+        )
 
     def _connect(self):
         self._session = FuturesSession(max_workers=DD_MAX_WORKERS)
@@ -336,33 +321,35 @@ class DatadogHTTPClient(object):
     def _close(self):
         # Resolve all the futures and log exceptions if any
         for future in as_completed(self._futures):
-            try:
-                future.result()
-            except Exception:
-                logger.exception("Exception while forwarding logs")
+            future.result()
 
-        self._session.close()
+        if self._session:
+            self._session.close()
 
     def send(self, logs):
         """
         Sends a batch of log, only retry on server and network errors.
         """
         try:
-            data = self._scrubber.scrub("[{}]".format(",".join(logs)))
+            data = self._scrubber.scrub(f'[{",".join(logs)}]')
         except ScrubbingException:
             raise Exception("could not scrub the payload")
         if DD_USE_COMPRESSION:
             data = compress_logs(data, DD_COMPRESSION_LEVEL)
 
         # FuturesSession returns immediately with a future object
-        future = self._session.post(
-            self._url, data, timeout=self._timeout, verify=self._ssl_validation
-        )
-        self._futures.append(future)
+        if self._session:
+            future = self._session.post(
+                self._url,
+                data,
+                timeout=self._timeout,
+                verify=self._ssl_validation,
+            )
+            self._futures.append(future)
 
     def __enter__(self):
         self._connect()
         return self
 
-    def __exit__(self, ex_type, ex_value, traceback):
+    def __exit__(self, *_):
         self._close()

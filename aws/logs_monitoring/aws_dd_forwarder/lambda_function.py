@@ -21,7 +21,7 @@ from .enhanced_lambda_metrics import (
 )
 from .logs import forward_logs
 from .parsing import (
-    parse,
+    parse_event,
     separate_security_hub_findings,
     parse_aws_waf_logs,
 )
@@ -46,7 +46,6 @@ from .settings import (
 logger = logging.getLogger()
 logger.setLevel(logging.getLevelName(os.environ.get("DD_LOG_LEVEL", "INFO").upper()))
 
-
 # DD_API_KEY must be set
 if DD_API_KEY == "<YOUR_DATADOG_API_KEY>" or DD_API_KEY == "":
     raise Exception("Missing Datadog API key")
@@ -56,6 +55,7 @@ if len(DD_API_KEY) != 32:
         "The API key is not the expected length. "
         "Please confirm that your API key is correct"
     )
+
 # Validate the API key
 logger.debug("Validating the Datadog API key")
 validation_res = requests.get(
@@ -82,14 +82,15 @@ HOST_IDENTITY_REGEXP = re.compile(
 
 def datadog_forwarder(event, context):
     """The actual lambda function entry point"""
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Received Event:{json.dumps(event)}")
-        logger.debug(f"Forwarder version: {DD_FORWARDER_VERSION}")
+    logger.debug(f"Received Event:{json.dumps(event)}")
+    logger.debug(f"Forwarder version: {DD_FORWARDER_VERSION}")
 
     if DD_ADDITIONAL_TARGET_LAMBDAS:
         invoke_additional_target_lambdas(event)
 
-    metrics, logs, trace_payloads = split(transform(enrich(parse(event, context))))
+    metrics, logs, trace_payloads = split_events(
+        transform_events(enrich_events(parse_event(event, context)))
+    )
 
     if DD_FORWARD_LOG:
         forward_logs(logs)
@@ -111,21 +112,16 @@ def invoke_additional_target_lambdas(event):
     lambda_payload = json.dumps(event)
 
     for lambda_arn in lambda_arns:
-        try:
-            lambda_client.invoke(
-                FunctionName=lambda_arn,
-                InvocationType="Event",
-                Payload=lambda_payload,
-            )
-        except Exception as e:
-            logger.exception(
-                f"Failed to invoke additional target lambda {lambda_arn} due to {e}"
-            )
+        lambda_client.invoke(
+            FunctionName=lambda_arn,
+            InvocationType="Event",
+            Payload=lambda_payload,
+        )
 
     return
 
 
-def split(events):
+def split_events(events):
     """Split events into metrics, logs, and trace payloads"""
     metrics, logs, trace_payloads = [], [], []
     for event in events:
@@ -138,61 +134,55 @@ def split(events):
         else:
             logs.append(event)
 
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(
-            f"Extracted {len(metrics)} metrics, {len(trace_payloads)} traces, and {len(logs)} logs"
-        )
+    logger.debug(
+        f"Extracted {len(metrics)} metrics, {len(trace_payloads)} "
+        f"traces, and {len(logs)} logs"
+    )
 
     return metrics, logs, trace_payloads
 
 
 def extract_metric(event):
     """Extract metric from an event if possible"""
-    try:
-        metric = json.loads(event["message"])
-        required_attrs = {"m", "v", "e", "t"}
-        if not all(attr in metric for attr in required_attrs):
-            return None
-        if not isinstance(metric["t"], list):
-            return None
-        if not (isinstance(metric["v"], int) or isinstance(metric["v"], float)):
-            return None
-
-        lambda_log_metadata = event.get("lambda", {})
-        lambda_log_arn = lambda_log_metadata.get("arn")
-
-        if lambda_log_arn:
-            metric["t"] += [f"function_arn:{lambda_log_arn.lower()}"]
-
-        metric["t"] += event[DD_CUSTOM_TAGS].split(",")
-        return metric
-    except Exception:
+    metric = json.loads(event["message"])
+    required_attrs = {"m", "v", "e", "t"}
+    if not all(attr in metric for attr in required_attrs):
         return None
+    if not isinstance(metric["t"], list):
+        return None
+    if not (isinstance(metric["v"], int) or isinstance(metric["v"], float)):
+        return None
+
+    lambda_log_metadata = event.get("lambda", {})
+    lambda_log_arn = lambda_log_metadata.get("arn")
+
+    if lambda_log_arn:
+        metric["t"] += [f"function_arn:{lambda_log_arn.lower()}"]
+
+    metric["t"] += event[DD_CUSTOM_TAGS].split(",")
+    return metric
 
 
 def extract_trace_payload(event):
     """Extract trace payload from an event if possible"""
-    try:
-        message = event["message"]
-        obj = json.loads(event["message"])
+    message = event["message"]
+    obj = json.loads(event["message"])
 
-        obj_has_traces = "traces" in obj
-        traces_is_a_list = isinstance(obj["traces"], list)
-        # check that the log is not containing a trace array unrelated to Datadog
-        trace_id_found = (
-            len(obj["traces"]) > 0
-            and len(obj["traces"][0]) > 0
-            and obj["traces"][0][0]["trace_id"] is not None
-        )
+    obj_has_traces = "traces" in obj
+    traces_is_a_list = isinstance(obj["traces"], list)
+    # check that the log is not containing a trace array unrelated to Datadog
+    trace_id_found = (
+        len(obj["traces"]) > 0
+        and len(obj["traces"][0]) > 0
+        and obj["traces"][0][0]["trace_id"] is not None
+    )
 
-        if obj_has_traces and traces_is_a_list and trace_id_found:
-            return {"message": message, "tags": event[DD_CUSTOM_TAGS]}
-        return None
-    except Exception:
-        return None
+    if obj_has_traces and traces_is_a_list and trace_id_found:
+        return {"message": message, "tags": event[DD_CUSTOM_TAGS]}
+    return None
 
 
-def transform(events):
+def transform_events(events):
     """Performs transformations on complex events
 
     Ex: handles special cases with nested arrays of JSON objects
@@ -212,7 +202,7 @@ def transform(events):
     return events
 
 
-def enrich(events):
+def enrich_events(events):
     """Adds event-specific tags and attributes to each event
 
     Args:
@@ -308,18 +298,18 @@ def extract_ddtags_from_message(event):
     extract `message.ddtags` and merge it with the top-level `ddtags` field.
     """
     if "message" in event and DD_CUSTOM_TAGS in event["message"]:
+        extracted_ddtags = None
         if isinstance(event["message"], dict):
             extracted_ddtags = event["message"].pop(DD_CUSTOM_TAGS)
-        if isinstance(event["message"], str):
-            try:
-                message_dict = json.loads(event["message"])
-                extracted_ddtags = message_dict.pop(DD_CUSTOM_TAGS)
-                event["message"] = json.dumps(message_dict)
-            except Exception:
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"Failed to extract ddtags from: {event}")
-                return
-        event[DD_CUSTOM_TAGS] = f"{event[DD_CUSTOM_TAGS]},{extracted_ddtags}"
+        elif isinstance(event["message"], str):
+            message_dict = json.loads(event["message"])
+            extracted_ddtags = message_dict.pop(DD_CUSTOM_TAGS)
+            event["message"] = json.dumps(message_dict)
+        else:
+            raise ValueError(f"Unknown event message: {json.dumps(event)}")
+
+        if extracted_ddtags:
+            event[DD_CUSTOM_TAGS] = f"{event[DD_CUSTOM_TAGS]},{extracted_ddtags}"
 
 
 def extract_host_from_cloudtrails(event):
@@ -381,19 +371,14 @@ def forward_metrics(metrics):
     Forward custom metrics submitted via logs to Datadog in a background thread
     using `lambda_stats` that is provided by the Datadog Python Lambda Layer.
     """
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Forwarding {len(metrics)} metrics")
+    logger.debug(f"Forwarding {len(metrics)} metrics")
 
     for metric in metrics:
-        try:
-            lambda_stats.distribution(
-                metric["m"], metric["v"], timestamp=metric["e"], tags=metric["t"]
-            )
-        except Exception:
-            logger.exception(f"Exception while forwarding metric {json.dumps(metric)}")
-        else:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(f"Forwarded metric: {json.dumps(metric)}")
+        lambda_stats.distribution(
+            metric["m"], metric["v"], timestamp=metric["e"], tags=metric["t"]
+        )
+
+        logger.debug(f"Forwarded metric: {json.dumps(metric)}")
 
     lambda_stats.distribution(
         "{}.metrics_forwarded".format(DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX),
@@ -403,18 +388,11 @@ def forward_metrics(metrics):
 
 
 def forward_traces(trace_payloads):
-    if logger.isEnabledFor(logging.DEBUG):
-        logger.debug(f"Forwarding {len(trace_payloads)} traces")
+    logger.debug(f"Forwarding {len(trace_payloads)} traces")
 
-    try:
-        trace_connection.send_traces(trace_payloads)
-    except Exception:
-        logger.exception(
-            f"Exception while forwarding traces {json.dumps(trace_payloads)}"
-        )
-    else:
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Forwarded traces: {json.dumps(trace_payloads)}")
+    trace_connection.send_traces(trace_payloads)
+
+    logger.debug(f"Forwarded traces: {json.dumps(trace_payloads)}")
 
     lambda_stats.distribution(
         "{}.traces_forwarded".format(DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX),

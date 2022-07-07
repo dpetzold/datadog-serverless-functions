@@ -11,21 +11,23 @@ import copy
 
 import boto3
 import botocore
+import botocore.config
 import itertools
 import re
 import urllib
+import urllib.parse
 import logging
 from io import BytesIO, BufferedReader
 
 from datadog_lambda.metric import lambda_stats
 
-from cache import CloudwatchLogGroupTagsCache
-from telemetry import (
+from .cache import CloudwatchLogGroupTagsCache
+from .telemetry import (
     DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
     get_forwarder_telemetry_tags,
     set_forwarder_telemetry_tags,
 )
-from settings import (
+from .settings import (
     DD_TAGS,
     DD_MULTILINE_LOG_REGEX_PATTERN,
     DD_SOURCE,
@@ -54,10 +56,10 @@ if DD_MULTILINE_LOG_REGEX_PATTERN:
         "^{}".format(DD_MULTILINE_LOG_REGEX_PATTERN)
     )
 
-rds_regex = re.compile("/aws/rds/(instance|cluster)/(?P<host>[^/]+)/(?P<name>[^/]+)")
+rds_regex = re.compile(r"/aws/rds/(instance|cluster)/(?P<host>[^/]+)/(?P<name>[^/]+)")
 
 cloudtrail_regex = re.compile(
-    "\d+_CloudTrail_\w{2}-\w{4,9}-\d_\d{8}T\d{4}Z.+.json.gz$", re.I
+    r"\d+_CloudTrail_\w{2}-\w{4,9}-\d_\d{8}T\d{4}Z.+.json.gz$", re.I
 )
 
 # Store the cache in the global scope so that it will be reused as long as
@@ -65,31 +67,28 @@ cloudtrail_regex = re.compile(
 account_cw_logs_tags_cache = CloudwatchLogGroupTagsCache()
 
 
-def parse(event, context):
+def parse_event(event, context):
     """Parse Lambda input to normalized events"""
     metadata = generate_metadata(context)
     event_type = "unknown"
-    try:
-        # Route to the corresponding parser
-        event_type = parse_event_type(event)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(f"Parsed event type: {event_type}")
-        if event_type == "s3":
-            events = s3_handler(event, context, metadata)
-        elif event_type == "awslogs":
-            events = awslogs_handler(event, context, metadata)
-        elif event_type == "events":
-            events = cwevent_handler(event, metadata)
-        elif event_type == "sns":
-            events = sns_handler(event, metadata)
-        elif event_type == "kinesis":
-            events = kinesis_awslogs_handler(event, context, metadata)
-    except Exception as e:
-        # Logs through the socket the error
-        err_message = "Error parsing the object. Exception: {} for event {}".format(
-            str(e), event
-        )
-        events = [err_message]
+
+    # Route to the corresponding parser
+    event_type = parse_event_type(event)
+
+    logger.debug(f"Parsed event type: {event_type}")
+
+    if event_type == "s3":
+        events = s3_handler(event, context, metadata)
+    elif event_type == "awslogs":
+        events = awslogs_handler(event, context, metadata)
+    elif event_type == "events":
+        events = cwevent_handler(event, metadata)
+    elif event_type == "sns":
+        events = sns_handler(event, metadata)
+    elif event_type == "kinesis":
+        events = kinesis_awslogs_handler(event, context, metadata)
+    else:
+        raise ValueError(f"Unknown event type: {event_type}")
 
     set_forwarder_telemetry_tags(context, event_type)
 
@@ -116,9 +115,7 @@ def generate_metadata(context):
             None,
             [
                 DD_TAGS,
-                ",".join(
-                    ["{}:{}".format(k, v) for k, v in dd_custom_tags_data.items()]
-                ),
+                ",".join([f"{k}:{v}" for k, v in dd_custom_tags_data.items()]),
             ],
         )
     )
@@ -134,13 +131,9 @@ def parse_event_type(event):
             # it's not uncommon to fan out s3 notifications through SNS,
             # should treat it as an s3 event rather than sns event.
             sns_msg = event["Records"][0]["Sns"]["Message"]
-            try:
-                sns_msg_dict = json.loads(sns_msg)
-                if "Records" in sns_msg_dict and "s3" in sns_msg_dict["Records"][0]:
-                    return "s3"
-            except Exception:
-                if logger.isEnabledFor(logging.DEBUG):
-                    logger.debug(f"No s3 event detected from SNS message: {sns_msg}")
+            sns_msg_dict = json.loads(sns_msg)
+            if "Records" in sns_msg_dict and "s3" in sns_msg_dict["Records"][0]:
+                return "s3"
             return "sns"
         elif "kinesis" in event["Records"][0]:
             return "kinesis"
@@ -165,6 +158,7 @@ def s3_handler(event, context, metadata):
         )
     else:
         s3 = boto3.client("s3")
+
     # if this is a S3 event carried in a SNS message, extract it and override the event
     if "Sns" in event["Records"][0]:
         event = json.loads(event["Records"][0]["Sns"]["Message"])
@@ -178,7 +172,7 @@ def s3_handler(event, context, metadata):
 
     metadata[DD_SERVICE] = get_service_from_tags(metadata)
 
-    ##Get the ARN of the service and set it as the hostname
+    # Get the ARN of the service and set it as the hostname
     hostname = parse_service_arn(source, key, bucket, context)
     if hostname:
         metadata[DD_HOST] = hostname
@@ -485,7 +479,7 @@ def awslogs_handler(event, context, metadata):
         )
 
     # Set host as log group where cloudwatch is source
-    if metadata[DD_SOURCE] == "cloudwatch" or metadata.get(DD_HOST, None) == None:
+    if metadata[DD_SOURCE] == "cloudwatch" or metadata.get(DD_HOST, None) is None:
         metadata[DD_HOST] = aws_attributes["aws"]["awslogs"]["logGroup"]
 
     if metadata[DD_SOURCE] == "appsync":
@@ -494,15 +488,12 @@ def awslogs_handler(event, context, metadata):
     if metadata[DD_SOURCE] == "stepfunction" and logs["logStream"].startswith(
         "states/"
     ):
-        try:
-            message = json.loads(logs["logEvents"][0]["message"])
-            if message.get("execution_arn") is not None:
-                execution_arn = message["execution_arn"]
-                arn_tokens = execution_arn.split(":")
-                arn_tokens[5] = "stateMachine"
-                metadata[DD_HOST] = ":".join(arn_tokens[:-1])
-        except Exception as e:
-            logger.debug("Unable to set stepfunction host: %s" % e)
+        message = json.loads(logs["logEvents"][0]["message"])
+        if message.get("execution_arn") is not None:
+            execution_arn = message["execution_arn"]
+            arn_tokens = execution_arn.split(":")
+            arn_tokens[5] = "stateMachine"
+            metadata[DD_HOST] = ":".join(arn_tokens[:-1])
 
     # When parsing rds logs, use the cloudwatch log group name to derive the
     # rds instance name, and add the log name of the stream ingested
