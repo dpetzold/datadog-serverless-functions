@@ -9,7 +9,7 @@ import datetime
 
 from time import time
 
-from cache import LambdaCustomTagsCache
+from .cache import LambdaCustomTagsCache
 
 ENHANCED_METRICS_NAMESPACE_PREFIX = "aws.lambda.enhanced"
 

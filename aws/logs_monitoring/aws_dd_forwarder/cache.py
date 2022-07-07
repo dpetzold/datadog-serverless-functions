@@ -10,7 +10,7 @@ from random import randint
 import boto3
 from botocore.exceptions import ClientError
 
-from settings import (
+from .settings import (
     DD_S3_BUCKET_NAME,
     DD_TAGS_CACHE_TTL_SECONDS,
     DD_S3_CACHE_LOCK_TTL_SECONDS,
@@ -19,7 +19,7 @@ from settings import (
     DD_S3_LOG_GROUP_CACHE_FILENAME,
     DD_S3_LOG_GROUP_CACHE_LOCK_FILENAME,
 )
-from telemetry import (
+from .telemetry import (
     DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
     get_forwarder_telemetry_tags,
 )
@@ -176,7 +176,7 @@ class LambdaTagsCache(object):
             file_content = cache_object.get()
             tags_cache = json.loads(file_content["Body"].read().decode("utf-8"))
             last_modified_unix_time = get_last_modified_time(file_content)
-        except:
+        except ClientError:
             send_forwarder_internal_metrics("s3_cache_fetch_failure")
             logger.debug("Unable to fetch cache from S3", exc_info=True)
             return {}, -1
