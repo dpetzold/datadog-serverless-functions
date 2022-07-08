@@ -11,6 +11,9 @@ setup(
     url="https://github.com/DataDog/datadog-serverless-functions/tree/master/aws/logs_monitoring",
     author="Datadog, Inc.",
     author_email="dev@datadoghq.com",
+    packages=[
+        "datadog_forwarder",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",

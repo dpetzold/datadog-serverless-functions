@@ -23,7 +23,7 @@ env_patch = patch.dict(
     },
 )
 env_patch.start()
-from lambda_function import (
+from datadog_forwarder.lambda_function import (
     invoke_additional_target_lambdas,
     extract_metric,
     extract_host_from_cloudtrails,
@@ -34,7 +34,7 @@ from lambda_function import (
     transform,
     split,
 )
-from parsing import parse, parse_event_type
+from datadog_forwarder.parsing import parse, parse_event_type
 
 env_patch.stop()
 
