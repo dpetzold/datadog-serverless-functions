@@ -6,14 +6,14 @@ from botocore.exceptions import ClientError
 from unittest.mock import patch
 from unittest import mock
 
-from enhanced_lambda_metrics import (
+from datadog_forwarder.enhanced_lambda_metrics import (
     parse_metrics_from_report_log,
     parse_lambda_tags_from_arn,
     generate_enhanced_lambda_metrics,
     create_out_of_memory_enhanced_metric,
 )
 
-from cache import (
+from datadog_forwarder.cache import (
     sanitize_aws_tag_string,
     LambdaCustomTagsCache,
     parse_get_resources_response_for_tags_by_arn,
@@ -314,8 +314,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
         success_message = "Success!"
         self.assertEqual(len(create_out_of_memory_enhanced_metric(success_message)), 0)
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics(
         self, mock_get_s3_cache, mock_forward_metrics
     ):
@@ -412,8 +412,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_with_tags(
         self, mock_get_s3_cache, mock_forward_metrics
     ):
@@ -525,8 +525,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_once_with_missing_arn(
         self, mock_get_s3_cache, mock_forward_metrics
     ):
@@ -561,8 +561,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_refresh_on_new_arn(
         self, mock_get_s3_cache, mock_forward_metrics
     ):
@@ -604,12 +604,12 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.LambdaCustomTagsCache.release_s3_cache_lock")
-    @patch("cache.LambdaCustomTagsCache.acquire_s3_cache_lock")
-    @patch("cache.LambdaCustomTagsCache.write_cache_to_s3")
-    @patch("cache.LambdaCustomTagsCache.build_tags_cache")
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaCustomTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.release_s3_cache_lock")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.acquire_s3_cache_lock")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.write_cache_to_s3")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.build_tags_cache")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_refresh_s3_cache(
         self,
         mock_get_s3_cache,
@@ -665,13 +665,13 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.LambdaCustomTagsCache.release_s3_cache_lock")
-    @patch("cache.LambdaCustomTagsCache.acquire_s3_cache_lock")
-    @patch("cache.resource_tagging_client")
-    @patch("cache.LambdaCustomTagsCache.write_cache_to_s3")
-    @patch("cache.parse_get_resources_response_for_tags_by_arn")
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaCustomTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.release_s3_cache_lock")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.acquire_s3_cache_lock")
+    @patch("datadog_forwarder.cache.resource_tagging_client")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.write_cache_to_s3")
+    @patch("datadog_forwarder.cache.parse_get_resources_response_for_tags_by_arn")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaCustomTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_client_error(
         self,
         mock_get_s3_cache,
@@ -725,8 +725,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
 
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_timeout(
         self, mock_get_s3_cache, mock_forward_metrics
     ):
@@ -784,8 +784,8 @@ class TestEnhancedLambdaMetrics(unittest.TestCase):
         )
         del os.environ["DD_FETCH_LAMBDA_TAGS"]
 
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.LambdaTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.LambdaTagsCache.get_cache_from_s3")
     def test_generate_enhanced_lambda_metrics_out_of_memory(
         self, mock_get_s3_cache, mock_forward_metrics
     ):

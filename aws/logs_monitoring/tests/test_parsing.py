@@ -20,7 +20,7 @@ env_patch = patch.dict(
     },
 )
 env_patch.start()
-from parsing import (
+from datadog_forwarder.parsing import (
     awslogs_handler,
     parse_event_source,
     parse_service_arn,
@@ -28,7 +28,7 @@ from parsing import (
     parse_aws_waf_logs,
     get_service_from_tags,
 )
-from settings import (
+from datadog_forwarder.settings import (
     DD_CUSTOM_TAGS,
     DD_SOURCE,
 )
@@ -734,12 +734,12 @@ class TestParseSecurityHubEvents(unittest.TestCase):
 
 
 class TestAWSLogsHandler(unittest.TestCase):
-    @patch("cache.CloudwatchLogGroupTagsCache.release_s3_cache_lock")
-    @patch("cache.CloudwatchLogGroupTagsCache.acquire_s3_cache_lock")
-    @patch("cache.cloudwatch_logs_client")
-    @patch("cache.CloudwatchLogGroupTagsCache.write_cache_to_s3")
-    @patch("cache.send_forwarder_internal_metrics")
-    @patch("cache.CloudwatchLogGroupTagsCache.get_cache_from_s3")
+    @patch("datadog_forwarder.cache.CloudwatchLogGroupTagsCache.release_s3_cache_lock")
+    @patch("datadog_forwarder.cache.CloudwatchLogGroupTagsCache.acquire_s3_cache_lock")
+    @patch("datadog_forwarder.cache.cloudwatch_logs_client")
+    @patch("datadog_forwarder.cache.CloudwatchLogGroupTagsCache.write_cache_to_s3")
+    @patch("datadog_forwarder.cache.send_forwarder_internal_metrics")
+    @patch("datadog_forwarder.cache.CloudwatchLogGroupTagsCache.get_cache_from_s3")
     def test_awslogs_handler_rds_postgresql(
         self,
         mock_get_s3_cache,

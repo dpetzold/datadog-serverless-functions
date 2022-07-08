@@ -1,6 +1,6 @@
 import unittest
 
-from logs import filter_logs
+from datadog_forwarder.logs import filter_logs
 
 
 class TestFilterLogs(unittest.TestCase):

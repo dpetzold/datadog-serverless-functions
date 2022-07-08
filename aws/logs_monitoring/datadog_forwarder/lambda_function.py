@@ -142,9 +142,25 @@ def split_events(events):
     return metrics, logs, trace_payloads
 
 
+def json_loads(message):
+    try:
+        return json.loads(message)
+    except json.decoder.JSONDecodeError as exc:
+        logger.debug(str(exc))
+        return None
+
+
 def extract_metric(event):
     """Extract metric from an event if possible"""
-    metric = json.loads(event["message"])
+
+    message = event.get("message")
+    if message is None:
+        return None
+
+    metric = json_loads(message)
+    if metric is None:
+        return None
+
     required_attrs = {"m", "v", "e", "t"}
     if not all(attr in metric for attr in required_attrs):
         return None
@@ -166,18 +182,21 @@ def extract_metric(event):
 def extract_trace_payload(event):
     """Extract trace payload from an event if possible"""
     message = event["message"]
-    obj = json.loads(event["message"])
 
-    obj_has_traces = "traces" in obj
-    traces_is_a_list = isinstance(obj["traces"], list)
+    obj = json_loads(message)
+    if obj is None:
+        return None
+
     # check that the log is not containing a trace array unrelated to Datadog
     trace_id_found = (
-        len(obj["traces"]) > 0
-        and len(obj["traces"][0]) > 0
+        "traces" in obj
+        and isinstance(obj["traces"], list)
+        and len(obj["traces"]) > 0
+        and isinstance(obj["traces"][0], list)
         and obj["traces"][0][0]["trace_id"] is not None
     )
 
-    if obj_has_traces and traces_is_a_list and trace_id_found:
+    if trace_id_found:
         return {"message": message, "tags": event[DD_CUSTOM_TAGS]}
     return None
 

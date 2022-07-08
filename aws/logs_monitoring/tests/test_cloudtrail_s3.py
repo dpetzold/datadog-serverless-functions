@@ -23,8 +23,8 @@ env_patch = patch.dict(
 )
 env_patch.start()
 
-import lambda_function
-import parsing
+from datadog_forwarder import lambda_function
+from datadog_forwarder import parsing
 
 env_patch.stop()
 
@@ -98,9 +98,9 @@ class TestS3CloudwatchParsing(unittest.TestCase):
     def setUp(self):
         self.maxDiff = 9000
 
-    @patch("cache.boto3")
-    @patch("parsing.boto3")
-    @patch("lambda_function.boto3")
+    @patch("datadog_forwarder.cache.boto3")
+    @patch("datadog_forwarder.parsing.boto3")
+    @patch("datadog_forwarder.lambda_function.boto3")
     def test_s3_cloudtrail_pasing_and_enrichment(
         self, lambda_boto3, parsing_boto3, cache_boto3
     ):
@@ -120,7 +120,7 @@ class TestS3CloudwatchParsing(unittest.TestCase):
             }
         }
 
-        result = parsing.parse({"Records": [payload]}, context)
+        result = parsing.parse_event({"Records": [payload]}, context)
 
         expected = copy.deepcopy([test_data["Records"][0]])
         expected[0].update(
@@ -146,7 +146,7 @@ class TestS3CloudwatchParsing(unittest.TestCase):
         self.assertEqual(expected[0], result[0])
 
         expected[0]["host"] = "i-08014e4f62ccf762d"
-        self.assertEqual(expected[0], lambda_function.enrich(result)[0])
+        self.assertEqual(expected[0], lambda_function.enrich_events(result)[0])
 
 
 if __name__ == "__main__":
