@@ -1,4 +1,4 @@
-IMAGE_NAME:=ss/auto-blocker
+IMAGE_NAME:=ss/datadog-forwarder
 IMAGE_URI := 810605503585.dkr.ecr.us-east-1.amazonaws.com/$(IMAGE_NAME)
 IMAGE_VERSION := $(shell date +%Y%m%d%H%M)
 REGION := us-east-1
@@ -19,12 +19,8 @@ login:
 pull:
 	docker pull $(IMAGE_URI):$(IMAGE_VERSION)
 
-run-writer:
-	login pull
+run:
 	docker run \
 		-v ~/.aws:/root/.aws \
 		-e AWS_DEFAULT_REGION=us-east-1 \
-		-e DYNACONF_ENV_NAME=ops \
-		-e DYNACONF_IP_SET_ENV=prod \
-		-e DYNACONF_WAF_ENABLED=1 \
-		-it $(IMAGE_NAME) --prod --writer
+		-it $(IMAGE_NAME) sh

@@ -15,4 +15,4 @@ RUN --mount=type=secret,id=known_hosts,dst=/root/.ssh/known_hosts \
     ssh-keyscan -H -t rsa github.rakops.com \
     && pip3 --no-cache-dir install -e .
 
-ENTRYPOINT ["aws-auto-blocker"]
+CMD ["datadog_forwarder.lambda_function.lambda_handler"]
