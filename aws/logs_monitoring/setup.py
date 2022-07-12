@@ -5,7 +5,7 @@
 from setuptools import setup
 
 setup(
-    name="aws-dd-forwarder",
+    name="aws-datadog-forwarder",
     version="0.0.0.dev0",
     description="Datadog AWS Forwarder Lambda Function",
     url="https://github.com/DataDog/datadog-serverless-functions/tree/master/aws/logs_monitoring",
