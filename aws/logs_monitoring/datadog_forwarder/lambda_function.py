@@ -30,47 +30,22 @@ from .telemetry import (
     get_forwarder_telemetry_tags,
 )
 from .settings import (
-    DD_API_KEY,
-    DD_FORWARD_LOG,
-    DD_SKIP_SSL_VALIDATION,
-    DD_API_URL,
-    DD_TRACE_INTAKE_URL,
-    DD_SOURCE,
-    DD_CUSTOM_TAGS,
-    DD_SERVICE,
-    DD_HOST,
-    DD_FORWARDER_VERSION,
     DD_ADDITIONAL_TARGET_LAMBDAS,
+    DD_API_KEY,
+    DD_API_URL,
+    DD_CUSTOM_TAGS,
+    DD_FORWARDER_VERSION,
+    DD_FORWARD_LOG,
+    DD_HOST,
+    DD_LOG_LEVEL,
+    DD_SERVICE,
+    DD_SKIP_SSL_VALIDATION,
+    DD_SOURCE,
+    DD_TRACE_INTAKE_URL,
 )
 
 logger = logging.getLogger()
-logger.setLevel(logging.getLevelName(os.environ.get("DD_LOG_LEVEL", "INFO").upper()))
 
-# DD_API_KEY must be set
-if DD_API_KEY == "<YOUR_DATADOG_API_KEY>" or DD_API_KEY == "":
-    raise ValueError("Missing Datadog API key")
-
-# Check if the API key is the correct number of characters
-if len(DD_API_KEY) != 32:
-    raise Exception(
-        "The API key is not the expected length. "
-        "Please confirm that your API key is correct"
-    )
-
-# Validate the API key
-logger.debug("Validating the Datadog API key")
-validation_res = requests.get(
-    "{}/api/v1/validate?api_key={}".format(DD_API_URL, DD_API_KEY),
-    verify=(not DD_SKIP_SSL_VALIDATION),
-    timeout=10,
-)
-if not validation_res.ok:
-    raise Exception("The API key is not valid.")
-
-# Force the layer to use the exact same API key and host as the forwarder
-api._api_key = DD_API_KEY
-api._api_host = DD_API_URL
-api._cacert = not DD_SKIP_SSL_VALIDATION
 
 trace_connection = TraceConnection(
     DD_TRACE_INTAKE_URL, DD_API_KEY, DD_SKIP_SSL_VALIDATION
@@ -81,10 +56,18 @@ HOST_IDENTITY_REGEXP = re.compile(
 )
 
 
+def init():
+    config_logging(DD_LOG_LEVEL)
+    validate_api_key()
+
+
 def datadog_forwarder(event, context):
+
     """The actual lambda function entry point"""
     logger.debug(f"Received Event:{json.dumps(event)}")
     logger.debug(f"Forwarder version: {DD_FORWARDER_VERSION}")
+
+    init()
 
     if DD_ADDITIONAL_TARGET_LAMBDAS:
         invoke_additional_target_lambdas(event)
@@ -147,7 +130,7 @@ def json_loads(message):
     try:
         return json.loads(message)
     except json.decoder.JSONDecodeError as exc:
-        logger.debug(str(exc))
+        logger.info(str(exc))
         return None
 
 
@@ -419,3 +402,51 @@ def forward_traces(trace_payloads):
         len(trace_payloads),
         tags=get_forwarder_telemetry_tags(),
     )
+
+
+def config_logging(log_level):
+    log_format = "[%(asctime)s.%(msecs).03d] [%(name)s,%(funcName)s:%(lineno)s] [%(levelname)s]  %(message)s"
+    date_format = "%Y-%m-%d:%HT%M:%S"
+
+    boto3.set_stream_logger("boto3", logging.INFO)
+    logging.basicConfig(
+        format=log_format,
+        datefmt=date_format,
+    )
+    logging.getLogger("slack_sdk").setLevel(logging.INFO)
+    logging.getLogger("botocore").setLevel(logging.INFO)
+    logging.getLogger().handlers[0].setFormatter(
+        logging.Formatter(
+            fmt=log_format,
+            datefmt=date_format,
+        )
+    )
+    logging.getLogger().setLevel(log_level)
+
+
+def validate_api_key():
+    # DD_API_KEY must be set
+    if DD_API_KEY == "<YOUR_DATADOG_API_KEY>" or DD_API_KEY == "":
+        raise ValueError("Missing Datadog API key")
+
+    # Check if the API key is the correct number of characters
+    if len(DD_API_KEY) != 32:
+        raise Exception(
+            "The API key is not the expected length. "
+            "Please confirm that your API key is correct"
+        )
+
+    # Validate the API key
+    logger.debug("Validating the Datadog API key")
+    validation_res = requests.get(
+        "{}/api/v1/validate?api_key={}".format(DD_API_URL, DD_API_KEY),
+        verify=(not DD_SKIP_SSL_VALIDATION),
+        timeout=10,
+    )
+    if not validation_res.ok:
+        raise Exception("The API key is not valid.")
+
+    # Force the layer to use the exact same API key and host as the forwarder
+    api._api_key = DD_API_KEY
+    api._api_host = DD_API_URL
+    api._cacert = not DD_SKIP_SSL_VALIDATION

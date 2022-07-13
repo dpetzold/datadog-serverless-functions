@@ -25,6 +25,11 @@ def get_env_var(envvar, default, boolean=False):
     return value
 
 
+# @param DD_LOG_LEVEl - String - conditional - default: INFO
+# The logging level.
+#
+DD_LOG_LEVEL = get_env_var("DD_LOG_LEVEL", "INFO")
+
 # @param DD_API_KEY - String - conditional - default: none
 # The Datadog API key associated with your Datadog Account
 # It can be found here:
