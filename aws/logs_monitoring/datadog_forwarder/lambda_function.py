@@ -415,18 +415,10 @@ def config_logging(log_level):
     #    )
     logging.getLogger("botocore").setLevel(logging.INFO)
 
-    ch = logging.StreamHandler()
-    ch.setLevel(log_level)
-
-    formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
-    ch.setFormatter(formatter)
-
     root_logger = logging.getLogger()
-    root_logger.addHandler(ch)
 
     print(root_logger.handlers)
 
-    """
     root_logger.handlers[0].setFormatter(
         logging.Formatter(
             fmt=log_format,
@@ -434,7 +426,6 @@ def config_logging(log_level):
         )
     )
     root_logger.setLevel(log_level)
-    """
 
 
 def validate_api_key():
