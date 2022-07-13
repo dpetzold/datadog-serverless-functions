@@ -275,6 +275,7 @@ def config_logging(log_level):
     stream_handler.setLevel(log_level)
     stream_handler.setFormatter(logging.Formatter(log_format))
     app_logger.addHandler(stream_handler)
+    app_logger.propagate = False
 
 
 def validate_api_key():
