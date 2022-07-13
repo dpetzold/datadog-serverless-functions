@@ -4,8 +4,7 @@ FROM public.ecr.aws/lambda/python:3.9
 
 # RUN apt install -y openssh-client git
 
-WORKDIR /app
-COPY . .
+COPY . ${LAMBDA_TASK_ROOT}
 
 # RUN mkdir -p -m 0600 /root/.ssh
 
