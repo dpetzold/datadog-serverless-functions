@@ -4,7 +4,6 @@
 # Copyright 2021 Datadog, Inc.
 
 import json
-import os
 import boto3
 import re
 import logging
@@ -426,6 +425,9 @@ def config_logging(log_level):
         )
     )
     root_logger.setLevel(log_level)
+
+    print(root_logger.handlers[0])
+    print(root_logger.handlers[0].formatter)
 
 
 def validate_api_key():
