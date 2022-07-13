@@ -15,4 +15,6 @@ COPY . .
 #     ssh-keyscan -H -t rsa github.rakops.com \
 #     && pip3 --no-cache-dir install -e .
 
+RUN pip3 --no-cache-dir install -e .
+
 CMD ["datadog_forwarder.lambda_function.lambda_handler"]

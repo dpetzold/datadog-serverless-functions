@@ -1,5 +1,6 @@
 IMAGE_NAME:=ss/datadog-forwarder
-IMAGE_URI := 810605503585.dkr.ecr.us-east-1.amazonaws.com/$(IMAGE_NAME)
+IMAGE_REPO := 810605503585.dkr.ecr.us-east-1.amazonaws.com/$(IMAGE_NAME)
+IMAGE_URI := $(IMAGE_REPO):$(IMAGE_VERSION)
 IMAGE_VERSION := $(shell date +%Y%m%d%H%M)
 FUNCTION_NAME := SS-OPS-1-datadog-forwarder
 REGION := us-east-1
@@ -11,14 +12,14 @@ docker-build:
 		-t $(IMAGE_NAME) .
 
 docker-push: docker-build
-	docker tag $(IMAGE_NAME):latest $(IMAGE_URI):$(IMAGE_VERSION)
-	docker push $(IMAGE_URI):$(IMAGE_VERSION)
+	docker tag $(IMAGE_NAME):latest $(IMAGE_URI)
+	docker push $(IMAGE_URI)
 
 login:
 	$$(aws ecr get-login --region ${REGION} --no-include-email)
 
 pull:
-	docker pull $(IMAGE_URI):$(IMAGE_VERSION)
+	docker pull $(IMAGE_URI)
 
 run:
 	docker run \
@@ -27,7 +28,4 @@ run:
 		-it $(IMAGE_NAME) bash
 
 deploy: docker-push
-	aws lambda update-function-code \
-        --function-name $(FUNCTION_NAME) \
-        --image-uri $(IMAGE_URI):latest
-	./wait-for-deploy.sh $(FUNCTION_NAME)
+	./deploy.sh $(FUNCTION_NAME)

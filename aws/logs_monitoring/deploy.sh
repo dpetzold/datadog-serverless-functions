@@ -1,6 +1,13 @@
 #!/bin/bash
 
 FUNCTION_NAME=$1
+IMAGE_URI=$2
+
+deploy() {
+	aws lambda update-function-code \
+        --function-name $FUNCTION_NAME \
+        --image-uri $IMAGE_URI
+}
 
 get_status() {
     status=$(aws lambda get-function \
@@ -8,6 +15,7 @@ get_status() {
         --query Configuration.LastUpdateStatus)
 }
 
+deploy
 get_status
 
 while [ $status != '"Successful"' ]
