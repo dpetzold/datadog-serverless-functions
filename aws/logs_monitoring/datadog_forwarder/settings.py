@@ -9,6 +9,9 @@ import os
 import boto3
 import botocore.config
 import logging
+import requests
+
+from datadog import api
 
 logger = logging.getLogger()
 
@@ -246,3 +249,58 @@ DD_S3_LOG_GROUP_CACHE_LOCK_FILENAME = "log-group-cache.lock"
 
 DD_TAGS_CACHE_TTL_SECONDS = int(get_env_var("DD_TAGS_CACHE_TTL_SECONDS", default=300))
 DD_S3_CACHE_LOCK_TTL_SECONDS = 60
+
+
+def config_logging(log_level):
+    log_format = "[%(asctime)s.%(msecs).03d] [%(name)s,%(funcName)s:%(lineno)s] [%(levelname)s]  %(message)s"
+    date_format = "%Y-%m-%d:%HT%M:%S"
+
+    boto3.set_stream_logger("boto3", logging.INFO)
+    #    logging.basicConfig(
+    #        format=log_format,
+    #        datefmt=date_format,
+    #    )
+    logging.getLogger("botocore").setLevel(logging.INFO)
+
+    root_logger = logging.getLogger()
+
+    print(root_logger.handlers)
+
+    root_logger.handlers[0].setFormatter(
+        logging.Formatter(
+            fmt=log_format,
+            datefmt=date_format,
+        )
+    )
+    root_logger.setLevel(log_level)
+
+    print(root_logger.handlers[0])
+    print(root_logger.handlers[0].formatter)
+
+
+def validate_api_key():
+    # DD_API_KEY must be set
+    if DD_API_KEY == "<YOUR_DATADOG_API_KEY>" or DD_API_KEY == "":
+        raise ValueError("Missing Datadog API key")
+
+    # Check if the API key is the correct number of characters
+    if len(DD_API_KEY) != 32:
+        raise Exception(
+            "The API key is not the expected length. "
+            "Please confirm that your API key is correct"
+        )
+
+    # Validate the API key
+    logger.debug("Validating the Datadog API key")
+    validation_res = requests.get(
+        "{}/api/v1/validate?api_key={}".format(DD_API_URL, DD_API_KEY),
+        verify=(not DD_SKIP_SSL_VALIDATION),
+        timeout=10,
+    )
+    if not validation_res.ok:
+        raise Exception("The API key is not valid.")
+
+    # Force the layer to use the exact same API key and host as the forwarder
+    api._api_key = DD_API_KEY
+    api._api_host = DD_API_URL
+    api._cacert = not DD_SKIP_SSL_VALIDATION
