@@ -424,6 +424,8 @@ def config_logging(log_level):
     root_logger = logging.getLogger()
     root_logger.addHandler(ch)
 
+    print(root_logger.handlers)
+
     """
     root_logger.handlers[0].setFormatter(
         logging.Formatter(
