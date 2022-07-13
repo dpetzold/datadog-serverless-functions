@@ -409,19 +409,30 @@ def config_logging(log_level):
     date_format = "%Y-%m-%d:%HT%M:%S"
 
     boto3.set_stream_logger("boto3", logging.INFO)
-    logging.basicConfig(
-        format=log_format,
-        datefmt=date_format,
-    )
-    logging.getLogger("slack_sdk").setLevel(logging.INFO)
+    #    logging.basicConfig(
+    #        format=log_format,
+    #        datefmt=date_format,
+    #    )
     logging.getLogger("botocore").setLevel(logging.INFO)
-    logging.getLogger().handlers[0].setFormatter(
+
+    ch = logging.StreamHandler()
+    ch.setLevel(log_level)
+
+    formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
+    ch.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.addHandler(ch)
+
+    """
+    root_logger.handlers[0].setFormatter(
         logging.Formatter(
             fmt=log_format,
             datefmt=date_format,
         )
     )
-    logging.getLogger().setLevel(log_level)
+    root_logger.setLevel(log_level)
+    """
 
 
 def validate_api_key():
