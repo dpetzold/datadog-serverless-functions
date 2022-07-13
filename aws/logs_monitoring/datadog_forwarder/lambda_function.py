@@ -6,7 +6,6 @@
 import json
 import boto3
 import re
-import logging
 
 from datadog_lambda.wrapper import datadog_lambda_wrapper
 from datadog_lambda.metric import lambda_stats
@@ -17,6 +16,7 @@ from .enhanced_lambda_metrics import (
     parse_and_submit_enhanced_metrics,
 )
 from .logs import forward_logs
+from .logger import get_logger
 from .parsing import (
     parse_event,
     separate_security_hub_findings,
@@ -42,7 +42,7 @@ from .settings import (
     validate_api_key,
 )
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 
 trace_connection = TraceConnection(

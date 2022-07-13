@@ -255,16 +255,12 @@ def config_logging(log_level):
     log_format = "[%(asctime)s.%(msecs).03d] [%(name)s,%(funcName)s:%(lineno)s] [%(levelname)s]  %(message)s"
     date_format = "%Y-%m-%d:%HT%M:%S"
 
-    boto3.set_stream_logger("boto3", logging.INFO)
     logging.basicConfig(
         format=log_format,
         datefmt=date_format,
     )
-    logging.getLogger("botocore").setLevel(logging.INFO)
-    logging.getLogger("datadog_lambda").setLevel(logging.INFO)
 
     root_logger = logging.getLogger()
-
     root_logger.handlers[0].setFormatter(
         logging.Formatter(
             fmt=log_format,
@@ -272,6 +268,10 @@ def config_logging(log_level):
         )
     )
     root_logger.setLevel(log_level)
+
+    boto3.set_stream_logger("boto3", logging.INFO)
+    logging.getLogger("botocore").setLevel(logging.INFO)
+    logging.getLogger("datadog_lambda").setLevel(logging.INFO)
 
 
 def validate_api_key():
@@ -281,7 +281,7 @@ def validate_api_key():
 
     # Check if the API key is the correct number of characters
     if len(DD_API_KEY) != 32:
-        raise Exception(
+        raise ValueError(
             "The API key is not the expected length. "
             "Please confirm that your API key is correct"
         )
@@ -294,7 +294,7 @@ def validate_api_key():
         timeout=10,
     )
     if not validation_res.ok:
-        raise Exception("The API key is not valid.")
+        raise ValueError("The API key is not valid.")
 
     # Force the layer to use the exact same API key and host as the forwarder
     api._api_key = DD_API_KEY
