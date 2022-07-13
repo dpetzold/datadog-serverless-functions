@@ -1,4 +1,3 @@
-import logging
 import os
 import json
 import datetime
@@ -10,6 +9,7 @@ from random import randint
 import boto3
 from botocore.exceptions import ClientError
 
+from .logger import get_logger
 from .settings import (
     DD_S3_BUCKET_NAME,
     DD_TAGS_CACHE_TTL_SECONDS,
@@ -31,7 +31,7 @@ JITTER_MAX = 100
 DD_TAGS_CACHE_TTL_SECONDS = DD_TAGS_CACHE_TTL_SECONDS + randint(JITTER_MIN, JITTER_MAX)
 s3_client = boto3.resource("s3")
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 try:
     from datadog_lambda.metric import lambda_stats

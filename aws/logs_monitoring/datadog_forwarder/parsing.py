@@ -16,17 +16,12 @@ import itertools
 import re
 import urllib
 import urllib.parse
-import logging
 from io import BytesIO, BufferedReader
 
 from datadog_lambda.metric import lambda_stats
 
 from .cache import CloudwatchLogGroupTagsCache
-from .telemetry import (
-    DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
-    get_forwarder_telemetry_tags,
-    set_forwarder_telemetry_tags,
-)
+from .logger import get_logger
 from .settings import (
     DD_TAGS,
     DD_MULTILINE_LOG_REGEX_PATTERN,
@@ -37,9 +32,15 @@ from .settings import (
     DD_FORWARDER_VERSION,
     DD_USE_VPC,
 )
+from .telemetry import (
+    DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
+    get_forwarder_telemetry_tags,
+    set_forwarder_telemetry_tags,
+)
 
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
+
 
 if DD_MULTILINE_LOG_REGEX_PATTERN:
     multiline_regex = re.compile(

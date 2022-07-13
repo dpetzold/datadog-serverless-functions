@@ -11,11 +11,11 @@ from concurrent.futures import as_completed
 import re
 import socket
 import ssl
-import logging
 import time
 from requests_futures.sessions import FuturesSession
 
 from datadog_lambda.metric import lambda_stats
+from .logger import get_logger
 from .telemetry import (
     DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX,
     get_forwarder_telemetry_tags,
@@ -36,7 +36,7 @@ from .settings import (
     SCRUBBING_RULE_CONFIGS,
 )
 
-logger = logging.getLogger()
+logger = get_logger(__name__)
 
 
 class RetriableException(Exception):
