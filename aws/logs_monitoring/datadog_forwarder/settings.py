@@ -229,7 +229,7 @@ DD_FORWARDER_VERSION = "3.51.0"
 
 # Additional target lambda invoked async with event data
 DD_ADDITIONAL_TARGET_LAMBDAS = str(
-    get_env_var("DD_ADDITIONAL_TARGET_LAMBDAS", default=None)
+    get_env_var("DD_ADDITIONAL_TARGET_LAMBDAS", default=[])
 )
 
 DD_S3_BUCKET_NAME = get_env_var("DD_S3_BUCKET_NAME", default=None)
