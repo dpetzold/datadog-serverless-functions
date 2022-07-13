@@ -48,7 +48,8 @@ logger.setLevel(logging.getLevelName(os.environ.get("DD_LOG_LEVEL", "INFO").uppe
 
 # DD_API_KEY must be set
 if DD_API_KEY == "<YOUR_DATADOG_API_KEY>" or DD_API_KEY == "":
-    raise Exception("Missing Datadog API key")
+    raise ValueError("Missing Datadog API key")
+
 # Check if the API key is the correct number of characters
 if len(DD_API_KEY) != 32:
     raise Exception(
