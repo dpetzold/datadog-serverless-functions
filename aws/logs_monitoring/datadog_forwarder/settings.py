@@ -256,15 +256,14 @@ def config_logging(log_level):
     date_format = "%Y-%m-%d:%HT%M:%S"
 
     boto3.set_stream_logger("boto3", logging.INFO)
-    #    logging.basicConfig(
-    #        format=log_format,
-    #        datefmt=date_format,
-    #    )
+    logging.basicConfig(
+        format=log_format,
+        datefmt=date_format,
+    )
     logging.getLogger("botocore").setLevel(logging.INFO)
+    logging.getLogger("datadog_lambda").setLevel(logging.INFO)
 
     root_logger = logging.getLogger()
-
-    print(root_logger.handlers)
 
     root_logger.handlers[0].setFormatter(
         logging.Formatter(
@@ -273,9 +272,6 @@ def config_logging(log_level):
         )
     )
     root_logger.setLevel(log_level)
-
-    print(root_logger.handlers[0])
-    print(root_logger.handlers[0].formatter)
 
 
 def validate_api_key():
