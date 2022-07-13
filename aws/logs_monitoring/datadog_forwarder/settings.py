@@ -271,13 +271,10 @@ def config_logging(log_level):
     logging.getLogger("urllib3").setLevel(logging.INFO)
 
     app_logger = logging.getLogger("datadog_forwarder")
-    app_logger.handlers[0].setFormatter(
-        logging.Formatter(
-            fmt=log_format,
-            datefmt=date_format,
-        )
-    )
-    app_logger.setLevel(log_level)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(log_level)
+    stream_handler.setFormatter(logging.Formatter(log_format))
+    app_logger.addHandler(stream_handler)
 
 
 def validate_api_key():

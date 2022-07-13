@@ -127,6 +127,7 @@ def json_loads(message):
         return json.loads(message)
     except json.decoder.JSONDecodeError as exc:
         logger.info(str(exc))
+        logger.info(message)
         return None
 
 
