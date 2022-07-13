@@ -4,7 +4,7 @@ FUNCTION_NAME=$1
 IMAGE_URI=$2
 
 deploy() {
-	aws lambda update-function-code \
+    aws lambda update-function-code \
         --function-name $FUNCTION_NAME \
         --image-uri $IMAGE_URI
 }
