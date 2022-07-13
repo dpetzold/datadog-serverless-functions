@@ -263,17 +263,21 @@ def config_logging(log_level):
     )
 
     root_logger = logging.getLogger()
-    root_logger.handlers[0].setFormatter(
+    root_logger.setLevel(logging.INFO)
+
+    boto3.set_stream_logger("boto3", logging.INFO)
+    logging.getLogger("botocore").setLevel(logging.INFO)
+    logging.getLogger("datadog_lambda").setLevel(logging.INFO)
+    logging.getLogger("urllib3").setLevel(logging.INFO)
+
+    app_logger = logging.getLogger("datadog_forwarder")
+    app_logger.handlers[0].setFormatter(
         logging.Formatter(
             fmt=log_format,
             datefmt=date_format,
         )
     )
-    root_logger.setLevel(log_level)
-
-    boto3.set_stream_logger("boto3", logging.INFO)
-    logging.getLogger("botocore").setLevel(logging.INFO)
-    logging.getLogger("datadog_lambda").setLevel(logging.INFO)
+    app_logger.setLevel(log_level)
 
 
 def validate_api_key():
