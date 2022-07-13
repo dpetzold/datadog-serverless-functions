@@ -1,7 +1,7 @@
 IMAGE_NAME:=ss/datadog-forwarder
 IMAGE_REPO := 810605503585.dkr.ecr.us-east-1.amazonaws.com/$(IMAGE_NAME)
-IMAGE_URI := $(IMAGE_REPO):$(IMAGE_VERSION)
 IMAGE_VERSION := $(shell date +%Y%m%d%H%M)
+IMAGE_URI := $(IMAGE_REPO):$(IMAGE_VERSION)
 FUNCTION_NAME := SS-OPS-1-datadog-forwarder
 REGION := us-east-1
 
@@ -28,4 +28,4 @@ run:
 		-it $(IMAGE_NAME) bash
 
 deploy: docker-push
-	./deploy.sh $(FUNCTION_NAME)
+	./deploy.sh $(FUNCTION_NAME) $(IMAGE_URI)
