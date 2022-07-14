@@ -1,7 +1,7 @@
 ---
 title: Datadog Forwarder
 kind: documentation
-dependencies: 
+dependencies:
   - "https://github.com/DataDog/datadog-serverless-functions/blob/master/aws/logs_monitoring/README.md"
 aliases:
   - /serverless/troubleshooting/installing_the_forwarder/
@@ -18,7 +18,12 @@ The Datadog Forwarder is an AWS Lambda function that ships logs, custom metrics,
 - Forward traces from AWS Lambda functions using CloudWatch logs
 - Generate and submit enhanced Lambda metrics (`aws.lambda.enhanced.*`) parsed from the AWS REPORT log: duration, billed_duration, max_memory_used, timeouts, out_of_memory, and estimated_cost
 
-For additional information on sending AWS services logs with the Datadog Forwarder, see [here](https://docs.datadoghq.com/logs/guide/send-aws-services-logs-with-the-datadog-lambda-function/).
+For additional information on sending AWS services logs with the Datadog
+Forwarder, see the follwing:
+
+* https://docs.datadoghq.com/logs/guide/send-aws-services-logs-with-the-datadog-lambda-function/
+* https://docs.aws.amazon.com/lambda/latest/dg/services-cloudwatchlogs.html
+* https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html#LambdaFunctionExample
 
 ## Installation
 
@@ -40,7 +45,7 @@ Once installed, you can subscribe the Forwarder to log sources, such as S3 bucke
 5. [Set up triggers to the installed Forwarder](https://docs.datadoghq.com/logs/guide/send-aws-services-logs-with-the-datadog-lambda-function/#set-up-triggers).
 6. Repeat the above steps in another region if you operate in multiple AWS regions.
 
-**Note:** If you had previously enabled your AWS Integration using the following [CloudFormation template](https://github.com/DataDog/cloudformation-template/tree/master/aws) from your AWS integration tile in Datadog, your account should already be provisioned with a Datadog Lambda Forwarder function.  
+**Note:** If you had previously enabled your AWS Integration using the following [CloudFormation template](https://github.com/DataDog/cloudformation-template/tree/master/aws) from your AWS integration tile in Datadog, your account should already be provisioned with a Datadog Lambda Forwarder function.
 **Note:** The code block of the Datadog Lambda Forwarder function is empty, as the logic is implemented through a Lambda layer.
 
 <!-- xxz tab xxx -->
@@ -365,7 +370,7 @@ Using an inefficient regular expression, such as `.*`, may slow down the Forward
 
 Some examples of regular expressions that can be used for log filtering:
 
-- Include (or exclude) Lambda platform logs: `"(START|END) RequestId:\s`. Note: The preceding `"` is needed to match the start of the log message, which is in a json blob (`{"message": "START RequestId...."}`). Datadog recommends keeping the `REPORT` logs, as they are used to populate the invocations list in the serverless function views. 
+- Include (or exclude) Lambda platform logs: `"(START|END) RequestId:\s`. Note: The preceding `"` is needed to match the start of the log message, which is in a json blob (`{"message": "START RequestId...."}`). Datadog recommends keeping the `REPORT` logs, as they are used to populate the invocations list in the serverless function views.
 - Include CloudTrail error messages only: `errorMessage`
 - Include only logs containing an HTTP 4XX or 5XX error code: `\b[4|5][0-9][0-9]\b`
 - Include only CloudWatch logs where the `message` field contains a specific JSON key/value pair: `\\"awsRegion\\":\\"us-east-1\\"`
