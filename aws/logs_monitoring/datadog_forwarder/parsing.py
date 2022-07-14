@@ -475,16 +475,19 @@ def awslogs_handler(event, context, metadata):
 
     logger.debug(data)
 
-    log_group = logs["logGroup"]
+    source = logs.get("logGroup", "cloudwatch")
 
     # Use the logStream to identify if this is a CloudTrail event
     # i.e. 123456779121_CloudTrail_us-east-1
-    source = "cloudtrail" if "_CloudTrail_" in logs["logStream"] else "cloudwatch"
+    if "_CloudTrail_" in logs["logStream"]:
+        source = "cloudtrail"
+    elif "tgw-attach" in logs["logStream"]:
+        source = "transitgateway"
 
     metadata[DD_SOURCE] = parse_event_source(event, source)
 
     if DD_GET_SERVICE_FROM_REGEX:
-        service, env, log_type = parse_log_group_name(log_group)
+        service, env, log_type = parse_log_group_name(logs["logGroup"])
         metadata[DD_SERVICE] = service
 
         tags = {}
