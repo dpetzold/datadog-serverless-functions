@@ -42,6 +42,7 @@ from .settings import (
     validate_api_key,
 )
 
+print(__name__)
 logger = get_logger(__name__)
 
 
@@ -72,10 +73,15 @@ def datadog_forwarder(event, context):
         transform_events(enrich_events(parse_event(event, context)))
     )
 
+    logger.debug(metrics)
+    logger.debug(logs)
+    logger.debug(trace_payloads)
+
     if DD_FORWARD_LOG:
         forward_logs(logs)
 
-    forward_metrics(metrics)
+    if len(metrics) > 0:
+        forward_metrics(metrics)
 
     if len(trace_payloads) > 0:
         forward_traces(trace_payloads)

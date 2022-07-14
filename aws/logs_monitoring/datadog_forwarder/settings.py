@@ -273,7 +273,7 @@ def config_logging(log_level):
 
     app_logger = logging.getLogger("datadog_forwarder")
     stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(log_level)
+    stream_handler.setLevel(getattr(logging, log_level))
     stream_handler.setFormatter(logging.Formatter(log_format))
     app_logger.addHandler(stream_handler)
     app_logger.propagate = False
