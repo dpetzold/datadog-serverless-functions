@@ -31,7 +31,7 @@ JITTER_MAX = 100
 DD_TAGS_CACHE_TTL_SECONDS = DD_TAGS_CACHE_TTL_SECONDS + randint(JITTER_MIN, JITTER_MAX)
 s3_client = boto3.resource("s3")
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 try:
     from datadog_lambda.metric import lambda_stats

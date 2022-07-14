@@ -70,7 +70,7 @@ METRIC_ADJUSTMENT_FACTORS = {
     INIT_DURATION_METRIC_NAME: 0.001,
 }
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 try:

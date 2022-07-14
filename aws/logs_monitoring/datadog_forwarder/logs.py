@@ -36,7 +36,7 @@ from .settings import (
     SCRUBBING_RULE_CONFIGS,
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class RetriableException(Exception):

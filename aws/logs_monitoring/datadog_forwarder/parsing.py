@@ -39,7 +39,7 @@ from .settings import (
 )
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 if DD_MULTILINE_LOG_REGEX_PATTERN:
     multiline_regex = re.compile(
