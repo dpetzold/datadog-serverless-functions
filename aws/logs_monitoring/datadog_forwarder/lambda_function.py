@@ -5,6 +5,8 @@
 
 import json
 import boto3
+import humanize
+import logging
 import re
 
 from datadog_lambda.wrapper import datadog_lambda_wrapper
@@ -16,7 +18,6 @@ from .enhanced_lambda_metrics import (
     parse_and_submit_enhanced_metrics,
 )
 from .logs import forward_logs
-from .logger import get_logger
 from .parsing import (
     parse_event,
     separate_security_hub_findings,
@@ -42,8 +43,7 @@ from .settings import (
     validate_api_key,
 )
 
-print(__name__)
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 trace_connection = TraceConnection(
@@ -63,7 +63,7 @@ validate_api_key()
 def datadog_forwarder(event, context):
 
     """The actual lambda function entry point"""
-    logger.debug(f"Received Event:{json.dumps(event)}")
+    logger.debug(f"Received Event: {humanize.naturalsize(len(event), gnu=True)}")
     logger.debug(f"Forwarder version: {DD_FORWARDER_VERSION}")
 
     if DD_ADDITIONAL_TARGET_LAMBDAS:

@@ -20,12 +20,13 @@ setup(
         "Programming Language :: Python :: 3.9",
     ],
     keywords="datadog aws lambda layer",
-    python_requires=">=3.7, <3.11",
+    python_requires=">=3.7, =<3.9",
     install_requires=[
-        "datadog-lambda==3.60.0",
-        "requests-futures==1.0.0",
-        "requests==2.28.1",
         "boto3==1.24.24",
+        "datadog-lambda==3.60.0",
+        "humanize==4.2.3",
+        "requests==2.28.1",
+        "requests-futures==1.0.0",
     ],
     extras_require={
         "dev": [
