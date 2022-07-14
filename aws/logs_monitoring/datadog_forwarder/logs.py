@@ -73,6 +73,7 @@ def forward_logs(logs):
             client.send(batch)
             logger.debug("Forwarded log batch:")
             logger.debug(json.dumps(batch))
+            logger.debug(batch)
 
     lambda_stats.distribution(
         f"{DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX}.logs_forwarded",
