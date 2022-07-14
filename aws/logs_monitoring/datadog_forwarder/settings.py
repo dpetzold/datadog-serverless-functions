@@ -264,7 +264,7 @@ def config_logging(log_level):
     )
 
     root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(log_level)
 
     boto3.set_stream_logger("boto3", logging.INFO)
     logging.getLogger("botocore").setLevel(logging.INFO)
