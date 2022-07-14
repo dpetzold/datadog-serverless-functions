@@ -72,7 +72,6 @@ def forward_logs(logs):
         for batch in batcher.batch(logs_to_forward):
             client.send(batch)
             logger.debug("Forwarded log batch:")
-            logger.debug(json.dumps(batch))
             logger.debug(batch)
 
     lambda_stats.distribution(

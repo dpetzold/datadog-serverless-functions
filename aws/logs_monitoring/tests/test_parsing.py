@@ -22,7 +22,9 @@ env_patch = patch.dict(
 env_patch.start()
 from datadog_forwarder.parsing import (
     awslogs_handler,
+    join_tags,
     parse_event_source,
+    parse_log_group_name,
     parse_service_arn,
     separate_security_hub_findings,
     parse_aws_waf_logs,
@@ -831,6 +833,37 @@ class TestGetServiceFromTags(unittest.TestCase):
             DD_CUSTOM_TAGS: "env:dev,tag,stack:aws:ecs,version:v1",
         }
         self.assertEqual(get_service_from_tags(metadata), "ecs")
+
+
+class TestGetServiceFromRegex(unittest.TestCase):
+    def test_match_1(self):
+        service_name, env, log_type = parse_log_group_name(
+            "/aws/lambda/SS-OPS-1-datadog-forwarder"
+        )
+        assert env == "ops"
+        assert service_name == "datadog-forwarder"
+        assert log_type is None
+
+    def test_match_2(self):
+        service_name, env, log_type = parse_log_group_name(
+            "ss-favorite-dgs-iapi-prod-weboutput"
+        )
+        assert log_type == "weboutput"
+        assert env == "prod"
+        assert service_name == "favorite-dgs-iapi"
+
+    def test_match_3(self):
+        service_name, env, log_type = parse_log_group_name("weboutput")
+        assert log_type is None
+        assert env is None
+        assert service_name == "weboutput"
+
+    def test_join_tags(self):
+        tags = {
+            "env": "ops",
+            "log_type": "weboutput",
+        }
+        assert join_tags(tags) == "env:ops,log_type:weboutput"
 
 
 if __name__ == "__main__":

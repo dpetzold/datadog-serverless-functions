@@ -28,13 +28,14 @@ from .telemetry import (
     set_forwarder_telemetry_tags,
 )
 from .settings import (
-    DD_TAGS,
-    DD_MULTILINE_LOG_REGEX_PATTERN,
-    DD_SOURCE,
     DD_CUSTOM_TAGS,
-    DD_SERVICE,
-    DD_HOST,
     DD_FORWARDER_VERSION,
+    DD_GET_SERVICE_FROM_REGEX,
+    DD_HOST,
+    DD_MULTILINE_LOG_REGEX_PATTERN,
+    DD_SERVICE,
+    DD_SOURCE,
+    DD_TAGS,
     DD_USE_VPC,
 )
 
@@ -209,6 +210,10 @@ def s3_handler(event, context, metadata):
             yield structured_line
 
 
+def join_tags(tags):
+    return ",".join([f"{k}:{v}" for k, v in tags.items()])
+
+
 def get_service_from_tags(metadata):
     # Get service from dd_custom_tags if it exists
     tagsplit = metadata[DD_CUSTOM_TAGS].split(",")
@@ -218,6 +223,32 @@ def get_service_from_tags(metadata):
 
     # Default service to source value
     return metadata[DD_SOURCE]
+
+
+def parse_log_group_type_1(log_group):
+    reo = re.search(r"SS-(?P<env>[^-]+)-1-(?P<service_name>[\w\-]+)", log_group)
+    if reo is None:
+        return log_group, None, None
+    return reo.group("service_name"), reo.group("env").lower(), None
+
+
+def parse_log_group_type_2(log_group):
+    split = log_group.split("-")
+    if len(split) < 3:
+        return log_group
+
+    split.pop(0)
+    log_type = split.pop(-1)
+    env = split.pop(-1)
+    service_name = "-".join(split)
+
+    return service_name, env, log_type
+
+
+def parse_log_group_name(log_group):
+    if log_group.startswith("ss-"):
+        return parse_log_group_type_2(log_group)
+    return parse_log_group_type_1(log_group)
 
 
 def parse_event_source(event, key):
@@ -438,19 +469,40 @@ def awslogs_handler(event, context, metadata):
     ) as decompress_stream:
         # Reading line by line avoid a bug where gzip would take a very long
         # time (>5min) for file around 60MB gzipped
-        data = b"".join(BufferedReader(decompress_stream))
+        data = b"".join(BufferedReader(decompress_stream))  # type: ignore
+
     logs = json.loads(data)
 
-    # Set the source on the logs
-    source = logs.get("logGroup", "cloudwatch")
+    logger.debug(data)
+
+    log_group = logs["logGroup"]
 
     # Use the logStream to identify if this is a CloudTrail event
     # i.e. 123456779121_CloudTrail_us-east-1
-    if "_CloudTrail_" in logs["logStream"]:
-        source = "cloudtrail"
+    source = "cloudtrail" if "_CloudTrail_" in logs["logStream"] else "cloudwatch"
+
     metadata[DD_SOURCE] = parse_event_source(event, source)
 
-    metadata[DD_SERVICE] = get_service_from_tags(metadata)
+    if DD_GET_SERVICE_FROM_REGEX:
+        service, env, log_type = parse_log_group_name(log_group)
+        metadata[DD_SERVICE] = service
+
+        tags = {}
+        if env:
+            tags["env"] = env
+        if log_type:
+            tags["log_type"] = log_type
+
+        metadata[DD_CUSTOM_TAGS] = join_tags(tags)
+    else:
+        metadata[DD_SERVICE] = get_service_from_tags(metadata)
+        formatted_tags = account_cw_logs_tags_cache.get(logs["logGroup"])
+        if len(formatted_tags) > 0:
+            metadata[DD_CUSTOM_TAGS] = (
+                ",".join(formatted_tags)
+                if not metadata[DD_CUSTOM_TAGS]
+                else metadata[DD_CUSTOM_TAGS] + "," + ",".join(formatted_tags)
+            )
 
     # Build aws attributes
     aws_attributes = {
@@ -462,14 +514,6 @@ def awslogs_handler(event, context, metadata):
             }
         }
     }
-
-    formatted_tags = account_cw_logs_tags_cache.get(logs["logGroup"])
-    if len(formatted_tags) > 0:
-        metadata[DD_CUSTOM_TAGS] = (
-            ",".join(formatted_tags)
-            if not metadata[DD_CUSTOM_TAGS]
-            else metadata[DD_CUSTOM_TAGS] + "," + ",".join(formatted_tags)
-        )
 
     # Set host as log group where cloudwatch is source
     if metadata[DD_SOURCE] == "cloudwatch" or metadata.get(DD_HOST, None) is None:

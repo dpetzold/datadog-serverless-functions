@@ -33,6 +33,15 @@ def get_env_var(envvar, default, boolean=False):
 #
 DD_LOG_LEVEL = get_env_var("DD_LOG_LEVEL", "INFO")
 
+
+# @param DD_LOG_LEVEl - String - conditional - default: INFO
+# Use a regex to parse the service name.
+#
+DD_GET_SERVICE_FROM_REGEX = get_env_var(
+    "DD_GET_SERVICE_FROM_REGEX", "false", boolean=True
+)
+
+
 # @param DD_API_KEY - String - conditional - default: none
 # The Datadog API key associated with your Datadog Account
 # It can be found here:
