@@ -254,6 +254,7 @@ DD_S3_CACHE_LOCK_TTL_SECONDS = 60
 
 
 def config_logging(log_level):
+    logger.info(f"Setting log level to {log_level}")
     log_format = "[%(asctime)s.%(msecs).03d] [%(name)s,%(funcName)s:%(lineno)s] [%(levelname)s]  %(message)s"
     date_format = "%Y-%m-%d:%HT%M:%S"
 
