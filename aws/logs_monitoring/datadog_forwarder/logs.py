@@ -321,6 +321,9 @@ class DatadogHTTPClient:
         if DD_USE_COMPRESSION:
             data = compress_logs(data, DD_COMPRESSION_LEVEL)
 
+        logger.debug(self._url)
+        logger.debug(data)
+
         # FuturesSession returns immediately with a future object
         if self._session:
             future = self._session.post(
