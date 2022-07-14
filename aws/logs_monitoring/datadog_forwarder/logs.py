@@ -71,7 +71,8 @@ def forward_logs(logs):
     with DatadogClient(cli) as client:
         for batch in batcher.batch(logs_to_forward):
             client.send(batch)
-            logger.debug(f"Forwarded log batch: {json.dumps(batch)}")
+            logger.debug("Forwarded log batch:")
+            logger.debug(json.dumps(batch))
 
     lambda_stats.distribution(
         f"{DD_FORWARDER_TELEMETRY_NAMESPACE_PREFIX}.logs_forwarded",
