@@ -3,13 +3,13 @@
 # This product includes software developed at Datadog (https://www.datadoghq.com/).
 # Copyright 2021 Datadog, Inc.
 
+import logging
 import re
 import datetime
 
 from time import time
 
 from .cache import LambdaCustomTagsCache
-from .logger import get_logger
 
 ENHANCED_METRICS_NAMESPACE_PREFIX = "aws.lambda.enhanced"
 
@@ -70,7 +70,7 @@ METRIC_ADJUSTMENT_FACTORS = {
     INIT_DURATION_METRIC_NAME: 0.001,
 }
 
-logger = get_logger(__name__)
+logger = logging.getLogger()
 
 
 try:

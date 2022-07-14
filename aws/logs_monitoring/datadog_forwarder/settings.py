@@ -13,9 +13,7 @@ import requests
 
 from datadog import api
 
-from .logger import get_logger
-
-logger = get_logger(__name__)
+logger = logging.getLogger()
 
 
 def get_env_var(envvar, default, boolean=False):
